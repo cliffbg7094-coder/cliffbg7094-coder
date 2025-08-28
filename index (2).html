@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支出記錄系統</title>
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-control:hover {
+            border-color: #c3c8cd;
+        }
+
+        select.form-control {
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 45px;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-submit:hover::before {
+            left: 100%;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-container {
+                padding: 25px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+        }
+
+        /* 输入验证样式 */
+        .form-control.invalid {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .form-control.valid {
+            border-color: #28a745;
+            background-color: #f8fff8;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 支出記錄</h1>
+            <p>輕鬆記錄每一筆支出，智能管理您的財務</p>
+        </div>
+
+        <div class="form-container">
+            <!-- 提示信息 -->
+            <div id="alert" class="alert"></div>
+            
+            <!-- 加载状态 -->
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <span style="margin-left: 10px;">正在提交數據...</span>
+            </div>
+
+            <!-- 支出记录表单 -->
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label for="date">📅 日期</label>
+                    <input type="date" id="date" name="date" class="form-control" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="item">📝 項目</label>
+                        <input type="text" id="item" name="item" class="form-control" placeholder="例如：午餐、交通費" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">💵 金額</label>
+                        <input type="number" id="amount" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category">🏷️ 類別</label>
+                        <select id="category" name="category" class="form-control" required>
+                            <option value="">請選擇類別</option>
+                            <option value="飲食">🍽️ 飲食</option>
+                            <option value="交通">🚗 交通</option>
+                            <option value="購物">🛍️ 購物</option>
+                            <option value="娛樂">🎬 娛樂</option>
+                            <option value="家居">🏠 家居</option>
+                            <option value="醫療">🏥 醫療</option>
+                            <option value="教育">📚 教育</option>
+                            <option value="其他">📦 其他</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMethod">💳 支付方式</label>
+                        <select id="paymentMethod" name="paymentMethod" class="form-control" required>
+                            <option value="">請選擇支付方式</option>
+                            <option value="現金">💵 現金</option>
+                            <option value="信用卡">💳 信用卡</option>
+                            <option value="電子支付">📱 電子支付</option>
+                            <option value="銀行轉帳">🏦 銀行轉帳</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="note">📄 備註</label>
+                    <textarea id="note" name="note" class="form-control" placeholder="可選的額外說明..." rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    ✨ 記錄支出
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 应用配置
+        const CONFIG = {
+            // 这里需要替换为您的Google Apps Script Web App URL
+            SCRIPT_URL: 'https://script.google.com/macros/library/d/1QUniKUi3sAkg3b-XeNpIcOw_dLCNNh4eAN4BiL8p8C_Tf_WIBrbZ7TbK/1',
+            SHEET_ID: '19iLhAAWJsogeTqfQciJyyiv9gBEB31MdRpGHWarfPxE'
+        };
+
+        // DOM元素引用
+        const form = document.getElementById('expenseForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const alert = document.getElementById('alert');
+        const dateInput = document.getElementById('date');
+
+        // 初始化应用
+        function initApp() {
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+
+            // 绑定表单提交事件
+            form.addEventListener('submit', handleFormSubmit);
+
+            // 绑定输入验证事件
+            bindValidationEvents();
+
+            console.log('支出記錄應用已初始化');
+        }
+
+        // 绑定输入验证事件
+        function bindValidationEvents() {
+            const inputs = form.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.addEventListener('blur', validateField);
+                input.addEventListener('input', clearValidationState);
+            });
+        }
+
+        // 验证单个字段
+        function validateField(event) {
+            const field = event.target;
+            const value = field.value.trim();
+            
+            // 清除之前的验证状态
+            field.classList.remove('valid', 'invalid');
+            
+            // 验证必填字段
+            if (field.hasAttribute('required') && !value) {
+                field.classList.add('invalid');
+                return false;
+            }
+            
+            // 验证金额字段
+            if (field.type === 'number' && value) {
+                const amount = parseFloat(value);
+                if (isNaN(amount) || amount < 0) {
+                    field.classList.add('invalid');
+                    return false;
+                }
+            }
+            
+            // 验证通过
+            if (value) {
+                field.classList.add('valid');
+            }
+            
+            return true;
+        }
+
+        // 验证整个表单
+        function validateForm() {
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!validateField({ target: field })) {
+                    isValid = false;
+                }
+            });
+            
+            return isValid;
+        }
+
+        // 收集表单数据
+        function collectFormData() {
+            const formData = new FormData(form);
+            const data = {};
+            
+            // 转换FormData为普通对象
+            for (let [key, value] of formData.entries()) {
+                data[key] = value.trim();
+            }
+            
+            // 添加时间戳
+            data.timestamp = new Date().toISOString();
+            
+            return data;
+        }
+
+        // 提交数据到Google Sheets
+        async function submitToGoogleSheets(data) {
+            // 检查是否配置了Script URL
+            if (CONFIG.SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+                throw new Error('請先配置Google Apps Script URL');
+            }
+
+            const response = await fetch(CONFIG.SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'addExpense',
+                    data: data,
+                    sheetId: CONFIG.SHEET_ID
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || '提交失敗');
+            }
+
+            return result;
+        }
+
+        // 设置加载状态
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                loading.style.display = 'block';
+                submitBtn.disabled = true;
+                submitBtn.textContent = '提交中...';
+            } else {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ 記錄支出';
+            }
+        }
+
+        // 显示提示消息
+        function showAlert(message, type = 'success') {
+            alert.textContent = message;
+            alert.className = `alert alert-${type}`;
+            alert.style.display = 'block';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+
+        // 重置表单
+        function resetForm() {
+            form.reset();
+            
+            // 重新设置今天的日期
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+            
+            // 清除所有验证状态
+            const inputs = form.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.classList.remove('valid', 'invalid');
+            });
+            
+            // 聚焦到项目输入框
+            document.getElementById('item').focus();
+        }
+
+        // 页面加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // 添加键盘快捷键支持
+        document.addEventListener('keydown', function(event) {
+            // Ctrl/Cmd + Enter 快速提交
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // 添加离线检测
+        window.addEventListener('online', function() {
+            showAlert('🌐 網絡連接已恢復', 'success');
+        });
+
+        window.addEventListener('offline', function() {
+            showAlert('📡 網絡連接已斷開，請檢查網絡設置', 'error');
+        });
+    </script>
+</body>
+</html>
+
